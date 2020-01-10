@@ -1,0 +1,16 @@
+.start_block {
+    text-align: center;
+}
+
+input {
+    margin-right: 10px;
+}
+
+button {
+    width: 100px;
+    margin-top: 10px;
+}
+
+.answer_btn {
+    display: block;
+}
