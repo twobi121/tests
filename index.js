@@ -20,8 +20,10 @@ class View {
         this.loginForm = document.createElement('form');
         this.loginInputName = document.createElement('input');
         this.loginInputName.placeholder = 'Ваше имя';
+        this.loginInputName.type = 'text';
         this.loginInputFamily = document.createElement('input');
         this.loginInputFamily.placeholder = 'Ваша фамилия';
+        this.loginInputFamily.type = 'text';
         this.loginForm.append(this.loginInputName, this.loginInputFamily);
         this.loginBlock.append(this.loginBlockTitle, this.loginForm);
         this.startBlock.append(this.loginBlock);
@@ -41,6 +43,9 @@ class View {
             inputLabel.input.id = i;
             inputLabel.input.value = i;
             inputLabel.input.type = 'radio';
+            if (i == 0) {
+                inputLabel.input.checked = true;
+            }
             inputLabel.label = document.createElement('label');
             inputLabel.label.innerText = options[i];
             inputLabel.label.setAttribute('for', i);
@@ -53,23 +58,19 @@ class View {
     createStartButton() {
         this.startBtn = document.createElement('button');
         this.startBtn.innerText = 'Начать';
+        this.startBtn.disabled = true;
         this.startBlock.append(this.startBtn);
     }
 
-    collectSettings() {
-        const settings = {};
-        settings.name = this.loginInputName.value;
-        settings.family = this.loginInputFamily.value;
-        settings.level = this.difficultyInputsArr.find(item => item.input.checked).input.value;
-        this.drawNameBlock(settings);
-        return settings;
+    unblockStartBtn(state) {
+        this.startBtn.disabled = state;
     }
 
     drawNameBlock(settings) {
         this.startBlock.remove();
         this.nameBlock = document.createElement('div');
         this.nameBlock.className = 'name_block';
-        this.nameBlock.innerHTML = `${settings.name}, уровень сложности ${settings.level}`;
+        this.nameBlock.innerHTML = `${settings.name}, уровень сложности ${+settings.level + 1}`;
     }
 
     drawQuestion(questionObj) {
@@ -138,17 +139,34 @@ class Controller {
 
     init() {
         this.view.init();
+        this.prevalidation();
         this.setStartBtn();
+    }
+
+    prevalidation() {
+        this.form = document.querySelectorAll('input[type = text]');
+        this.form.forEach(item => item.addEventListener('input', () => {
+            if (this.form[0].value && this.form[1].value) {
+                this.view.unblockStartBtn(false);
+            } else this.view.unblockStartBtn(true); 
+        }))
     }
 
     setStartBtn() {
         const startBtn = document.querySelector('button');
-        let settings;
-        startBtn.addEventListener('click', () => {
-            settings = this.view.collectSettings();
+        const settings = {};
+        startBtn.addEventListener('click', () => {    
+            const inputs = [...document.querySelectorAll('input')];       
+            settings.name = inputs[0].value;
+            settings.family = inputs[1].value;
+            settings.level = inputs.find(item => item.checked).value;       
+            
+            
+            
             this.model.saveSettings(settings);
             this.model.generateQuestions();
             let currentQuestion = this.model.getQuestion();
+            this.view.drawNameBlock(settings);
             this.view.drawQuestion(currentQuestion);
             this.setAnswerBtn();
         });
