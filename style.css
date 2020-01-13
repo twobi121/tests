@@ -8,9 +8,16 @@ input {
 
 button {
     width: 100px;
-    margin-top: 10px;
+    margin: 10px auto;
+    cursor: pointer;
+    display: block;
 }
 
 .answer_btn {
     display: block;
 }
+
+label, input[type=radio] {
+    cursor: pointer;
+}
+

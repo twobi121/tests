@@ -57,6 +57,7 @@ class View {
 
     createStartButton() {
         this.startBtn = document.createElement('button');
+        this.startBtn.className = 'start_btn';
         this.startBtn.innerText = 'Начать';
         this.startBtn.disabled = true;
         this.startBlock.append(this.startBtn);
@@ -64,6 +65,23 @@ class View {
 
     unblockStartBtn(state) {
         this.startBtn.disabled = state;
+    }
+
+    showValidationAlert() {
+        if (this.validationAlert) {
+            return;
+        } else {
+            this.validationAlert = document.createElement('p');
+            this.validationAlert.innerText = 'ИМЯ И ФАМИЛИЯ ДОЛЖНЫ СОДЕРЖАТЬ ТОЛЬКО РУССКИЕ ИЛИ ЛАТИНСКИЕ БУКВЫ';
+            this.loginBlock.append(this.validationAlert);
+        }
+    }
+
+    hideValidationAlert() {
+        if (this.validationAlert) {
+            this.validationAlert.remove();
+            this.validationAlert = null;
+        }
     }
 
     drawNameBlock(settings) {
@@ -74,17 +92,21 @@ class View {
     }
 
     drawQuestion(questionObj) {
+        if (this.questionBlock) {
+            this.questionBlock.remove();
+        }
+
         this.questionBlock = document.createElement('div');
         this.questionBlock.className = 'question_block';
         this.questionTitle = document.createElement('h2');
-        this.questionTitle.innerText = 'Вопрос';
+        this.questionTitle.innerText = `Вопрос ${questionObj.num}`;
         this.questionItem = document.createElement('p');
         this.questionItem.className = 'question_item';
         this.questionItem.innerText = questionObj.question;
         this.drawAnswers(questionObj);
         this.drawAnswerBtn();
-        this.questionBlock.append(this.questionItem, this.answersBlock);
-        this.container.append(this.nameBlock, this.questionTitle, this.questionBlock);
+        this.questionBlock.append(this.questionTitle, this.questionItem, this.answersBlock);
+        this.container.append(this.nameBlock, this.questionBlock);
     }
 
     drawAnswers(questionObj) {
@@ -118,23 +140,49 @@ class View {
         this.answersBlock.append(this.answerBtn);
     }
 
-    getAnswer() {
-        return this.answersInputs.find(item => item.input.checked).input.value;
+    showScore(score) {
+        this.questionBlock.remove();
+        this.questionBlock = null;
+        this.scoreBlock = document.createElement('div');
+        this.scoreBlock.innerHTML = `Поздравялем! Вы правильно ответили на ${score}% заданных вопросов`;
+        this.quitBtn = document.createElement('button');
+        this.quitBtn.className = 'quit_btn';
+        this.quitBtn.innerText = 'Выход';
+        this.changeLvlBtn = document.createElement('button');
+        this.changeLvlBtn.className = 'change-lvl_btn';
+        this.changeLvlBtn.innerText = 'Выбрать другой уровень сложности';
+        this.scoreBlock.append(this.quitBtn, this.changeLvlBtn);
+        this.container.append(this.scoreBlock);
     }
 
-    drawRight() {
-        alert('Это правильный ответ!');
+    quit() {
+        [...this.container.children].forEach(item => item.remove());
     }
 
-    drawWrong() {
-        alert('Это неправильный ответ!')
+    showLvlOptions() {
+        if (!this.startNewLvlBtn) {
+            this.startNewLvlBtn = document.createElement('button');
+            this.startNewLvlBtn.className = 'start-newlvl_btn';
+            this.startNewLvlBtn.innerText = 'НАЧАТЬ';
+        }
+        console.log(this.difficultyInputsArr)
+
+        this.difficultyBlock.append(this.startNewLvlBtn);
+        this.container.append(this.difficultyBlock);
+        document.querySelector('input').checked = true;
     }
+
+    removeDifficultyBlock() {
+        this.difficultyBlock.remove();
+    }
+
 }
 
 class Controller {
     constructor(model, view) {
         this.model = model;
         this.view = view;
+        this.regExp = /^[a-zа-яё]+$/i;
     }
 
     init() {
@@ -146,41 +194,92 @@ class Controller {
     prevalidation() {
         this.form = document.querySelectorAll('input[type = text]');
         this.form.forEach(item => item.addEventListener('input', () => {
-            if (this.form[0].value && this.form[1].value) {
-                this.view.unblockStartBtn(false);
-            } else this.view.unblockStartBtn(true); 
+            if (this.checkNumbers()) {
+                this.view.showValidationAlert();
+            } else {
+                this.view.hideValidationAlert();
+                if (this.form[0].value && this.form[1].value) {
+                    this.view.unblockStartBtn(false);
+                } else this.view.unblockStartBtn(true);
+            }
         }))
     }
 
+    checkNumbers() {
+        for (let i = 0; i < 2; i++) {
+            if(!this.form[i].value.search(this.regExp)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     setStartBtn() {
-        const startBtn = document.querySelector('button');
+        const startBtn = document.querySelector('.start_btn');
         const settings = {};
-        startBtn.addEventListener('click', () => {    
-            const inputs = [...document.querySelectorAll('input')];       
+        startBtn.addEventListener('click', () => {
+            const inputs = [...document.querySelectorAll('input')];
             settings.name = inputs[0].value;
             settings.family = inputs[1].value;
-            settings.level = inputs.find(item => item.checked).value;       
-            
-            
-            
+            settings.level = inputs.find(item => item.checked).value;
             this.model.saveSettings(settings);
-            this.model.generateQuestions();
-            let currentQuestion = this.model.getQuestion();
-            this.view.drawNameBlock(settings);
-            this.view.drawQuestion(currentQuestion);
-            this.setAnswerBtn();
+            this.drawQuestions(settings);
         });
+    }
+
+    drawQuestions(settings) {
+        this.view.removeDifficultyBlock();
+        this.view.drawNameBlock(settings);
+        this.model.generateQuestions();
+        this.generateQuestion();
+    }
+
+    generateQuestion() {
+        let currentQuestion = this.model.getQuestion();
+        this.view.drawQuestion(currentQuestion);
+        this.setAnswerBtn();
     }
 
     setAnswerBtn() {
         this.answerBtn = document.querySelector('.answer_btn');
         this.answerBtn.addEventListener('click', () => {
-            let answer = this.view.getAnswer();
+            let answer = [...document.querySelectorAll('input')].find(item => item.checked).value;
             if (this.model.checkAnswer(answer)) {
-                this.view.drawRight();
-            } else this.view.drawWrong();
+                this.generateQuestion();
+            } else {
+                let score = this.model.calculateScore();
+                this.view.showScore(score);
+                this.setScoreBtns();
+            }
         })
 
+    }
+
+    setScoreBtns() {
+        let quitBtn = document.querySelector('.quit_btn');
+        let newLvlBtn = document.querySelector('.change-lvl_btn');
+        quitBtn.addEventListener('click', () => {
+            this.view.quit();
+            this.model.quit();
+            this.init();
+        });
+        newLvlBtn.addEventListener('click', () => {
+            this.view.quit();
+            this.model.quit();
+            this.view.showLvlOptions();
+            this.setNewLvlBtn();
+        });
+    }
+
+    setNewLvlBtn() {
+        const startNewLvlBtn = document.querySelector('.start-newlvl_btn');
+        startNewLvlBtn.addEventListener('click', () => {
+            const inputs = [...document.querySelectorAll('input')];
+            const level = inputs.find(item => item.checked).value;
+            this.model.changeLvl(level);
+            let settings = this.model.settings;
+            this.drawQuestions(settings);
+        })
     }
 }
 
@@ -327,10 +426,12 @@ class Model {
             ], answer: 'кормить пассажиров'}
 
         ];
+        this.points = 0;
     }
 
     saveSettings(settings) {
         this.settings = settings;
+        settings.name = settings.name[0].toUpperCase() + settings.name.slice(1)
     }
 
     generateQuestions() {
@@ -346,20 +447,38 @@ class Model {
             const j = Math.floor(Math.random() * (i + 1));
             [array[i], array[j]] = [array[j], array[i]];
         }
-
         return array;
     }
 
     getQuestion() {
         this.currentQuestion = this.currentLvlQuestions[this.currentQuestionNum];
+        this.currentQuestion.num = this.currentQuestionNum + 1;
         ++this.currentQuestionNum;
         return this.currentQuestion;
     }
 
     checkAnswer(answer) {
-        if(answer == this.currentQuestion.answer) {
-            return true;
-        } else return false;
+        if (answer == this.currentQuestion.answer) {
+            ++this.points;
+        }
+
+        if (this.currentQuestionNum == 5) {
+            return false
+        } else return true;
+    }
+
+    calculateScore() {
+        this.score = this.points / 5 * 100;
+        return this.score;
+    }
+
+    quit() {
+        this.currentQuestionNum = 0;
+        this.points = 0;
+    }
+
+    changeLvl(level) {
+        this.settings.level = level;
     }
 
 
