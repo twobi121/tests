@@ -137,22 +137,57 @@ class View {
         this.answerBtn = document.createElement('button');
         this.answerBtn.className = 'answer_btn';
         this.answerBtn.innerText = 'Ответить';
+        this.answerBtn.disabled = true;
         this.answersBlock.append(this.answerBtn);
     }
 
-    showScore(score) {
+    unblockAnswerBtn(state) {
+        this.answerBtn.disabled = state;
+    }
+
+    showScore(score, answers) {
         this.questionBlock.remove();
         this.questionBlock = null;
         this.scoreBlock = document.createElement('div');
-        this.scoreBlock.innerHTML = `Поздравялем! Вы правильно ответили на ${score}% заданных вопросов`;
+        this.scoreBlock.className = 'score_block';
+        this.scoreBlock.innerHTML = `<p>Поздравляем! Вы правильно ответили на ${score}% заданных вопросов</p>`;
+        this.scoreBtnBlock = document.createElement('div');
+        this.scoreBtnBlock.className = 'change-lvl-btn_wrapper';
         this.quitBtn = document.createElement('button');
         this.quitBtn.className = 'quit_btn';
         this.quitBtn.innerText = 'Выход';
         this.changeLvlBtn = document.createElement('button');
         this.changeLvlBtn.className = 'change-lvl_btn';
         this.changeLvlBtn.innerText = 'Выбрать другой уровень сложности';
-        this.scoreBlock.append(this.quitBtn, this.changeLvlBtn);
+        this.showRightAnswers(answers);
+        this.scoreBtnBlock.append(this.changeLvlBtn, this.quitBtn)
+        this.scoreBlock.append(this.scoreBtnBlock);
         this.container.append(this.scoreBlock);
+    }
+
+    showRightAnswers(answers) {
+        this.rightAnswersBlock = document.createElement('div');
+        this.rightAnswersBlock.className = 'right-answers_block';
+
+        for (let i = 0; i < 5; i++) {
+            this.rightAnswersBlock.insertAdjacentHTML('beforeend', `<h2>Вопрос ${answers[i].num}</h2> 
+            <p>${answers[i].question}</p>`);
+            let ul = document.createElement('ul');
+            let variants = answers[i].variants;
+            for (let j = 0; j < 4; j++) {
+                if (variants[j] == answers[i].answer) {
+                    ul.insertAdjacentHTML('beforeend', `<li style = "background-color: green">${variants[j]}</li>`)
+                } else if (variants[j] == answers[i].userAnswer && answers[i].answer != answers[i].userAnswer) {
+                    ul.insertAdjacentHTML('beforeend', `<li style = "background-color: red">${variants[j]}</li>`)
+                } else ul.insertAdjacentHTML('beforeend', `<li>${variants[j]}</li>`);
+
+
+            }
+            this.rightAnswersBlock.append(ul);
+        }
+
+        this.scoreBlock.append(this.rightAnswersBlock);
+
     }
 
     quit() {
@@ -165,7 +200,6 @@ class View {
             this.startNewLvlBtn.className = 'start-newlvl_btn';
             this.startNewLvlBtn.innerText = 'НАЧАТЬ';
         }
-        console.log(this.difficultyInputsArr)
 
         this.difficultyBlock.append(this.startNewLvlBtn);
         this.container.append(this.difficultyBlock);
@@ -207,6 +241,7 @@ class Controller {
 
     checkNumbers() {
         for (let i = 0; i < 2; i++) {
+
             if(!this.form[i].value.search(this.regExp)) {
                 return false;
             }
@@ -237,7 +272,18 @@ class Controller {
     generateQuestion() {
         let currentQuestion = this.model.getQuestion();
         this.view.drawQuestion(currentQuestion);
+        this.validateChoose();
         this.setAnswerBtn();
+    }
+
+    validateChoose() {
+        const answersBlock = document.querySelector('.answers_block');
+        answersBlock.addEventListener('change', () => {
+            let answer = [...document.querySelectorAll('input')].find(item => item.checked);
+            if (answer) {
+                this.view.unblockAnswerBtn(false);
+            }
+        } )
     }
 
     setAnswerBtn() {
@@ -248,7 +294,8 @@ class Controller {
                 this.generateQuestion();
             } else {
                 let score = this.model.calculateScore();
-                this.view.showScore(score);
+                let answers = this.model.getAnswers();
+                this.view.showScore(score, answers);
                 this.setScoreBtns();
             }
         })
@@ -356,7 +403,7 @@ class Model {
                 '«кабачок»',
                 '«патиссон»',
             ],
-            answer: 'корнишон'},
+            answer: '«корнишон»'},
             {level: 1,
             question: 'Что на Руси называли «голова садовая»?',
             variants: [
@@ -427,6 +474,7 @@ class Model {
 
         ];
         this.points = 0;
+        this.answersArr = [];
     }
 
     saveSettings(settings) {
@@ -453,7 +501,7 @@ class Model {
     getQuestion() {
         this.currentQuestion = this.currentLvlQuestions[this.currentQuestionNum];
         this.currentQuestion.num = this.currentQuestionNum + 1;
-        ++this.currentQuestionNum;
+
         return this.currentQuestion;
     }
 
@@ -462,9 +510,16 @@ class Model {
             ++this.points;
         }
 
+        this.currentLvlQuestions[this.currentQuestionNum].userAnswer = answer;
+        ++this.currentQuestionNum;
+
         if (this.currentQuestionNum == 5) {
             return false
         } else return true;
+    }
+
+    getAnswers() {
+        return this.currentLvlQuestions;
     }
 
     calculateScore() {

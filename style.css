@@ -1,16 +1,34 @@
+* {
+    margin: 0;
+    font-family: 'Vollkorn', serif;
+}
+
+#app {
+    height: 100vh;
+    background: linear-gradient(-45deg, rgba(212,43,164,0.85) 4%, rgba(212,43,164,0.86) 7%, rgba(196,59,157,0.9) 31%, rgba(215,35,158,0.97) 70%, rgba(213,40,162,1) 85%, rgba(212,43,164,1) 95%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+h2 {
+    font-size: 30px;
+    margin: 20px;
+}
+
 .start_block {
     text-align: center;
 }
 
 input {
     margin-right: 10px;
+    padding: 10px;
 }
 
 button {
     width: 100px;
     margin: 10px auto;
     cursor: pointer;
-    display: block;
 }
 
 .answer_btn {
@@ -19,5 +37,10 @@ button {
 
 label, input[type=radio] {
     cursor: pointer;
+}
+
+.change-lvl-btn_wrapper {
+    display: flex;
+
 }
 
